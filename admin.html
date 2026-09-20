@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kurumsal İSG ve Güvenlik Ziyaretçi Takip Paneli</title>
+    <style>
+        :root {
+            --primary: #ea580c;
+            --primary-hover: #c2410c;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { background: var(--bg); color: var(--text-main); line-height: 1.5; padding: 24px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .navbar { display: flex; justify-content: space-between; align-items: center; background: white; padding: 18px 24px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+        .navbar h1 { font-size: 1.3rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px; }
+        .nav-actions { display: flex; gap: 10px; }
+        .btn { padding: 8px 16px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: white; color: var(--text-main); transition: 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-danger { background: #dc2626; color: white; border-color: #dc2626; }
+        .btn-success { background: #16a34a; color: white; border-color: #16a34a; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: white; padding: 18px; border-radius: 10px; border: 1px solid var(--border); }
+        .stat-label { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+        .stat-val { font-size: 1.8rem; font-weight: 800; color: #0f172a; margin-top: 4px; }
+
+        .filter-bar { background: white; padding: 16px 20px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap; }
+        .filter-bar input, .filter-bar select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem; outline: none; }
+        .filter-bar input { flex: 1; min-width: 200px; }
+
+        .table-container { background: white; border-radius: 10px; border: 1px solid var(--border); overflow-x: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem; }
+        th { background: #f8fafc; padding: 12px 16px; font-weight: 700; color: #475569; border-bottom: 1px solid var(--border); white-space: nowrap; }
+        td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        tr:hover { background: #f1f5f9; }
+
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
+        .badge-active { background: #ffedd5; color: #ea580c; border: 1px solid #fed7aa; }
+        .badge-out { background: #f1f5f9; color: #64748b; }
+
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; padding: 20px; z-index: 50; }
+        .modal-card { background: white; width: 100%; max-width: 650px; border-radius: 12px; padding: 24px; max-height: 90vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 16px; }
+        .detail-row { display: flex; margin-bottom: 10px; font-size: 0.88rem; }
+        .detail-lbl { width: 160px; font-weight: 600; color: var(--text-muted); }
+        .detail-val { flex: 1; color: var(--text-main); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="navbar">
+        <h1>🦺 İSG & Tesis Güvenlik Ziyaretçi Paneli</h1>
+        <div class="nav-actions">
+            <a href="/" class="btn" target="_blank">🌐 Giriş Formu</a>
+            <button class="btn btn-danger" onclick="printEvacuationList()">🚨 Tahliye Listesi Yazdır</button>
+            <button class="btn btn-primary" onclick="exportCSV()">📥 CSV Dışa Aktar</button>
+            <button class="btn" onclick="fetchData()">🔄 Yenile</button>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card" style="border-left: 4px solid #ea580c;">
+            <div class="stat-label">Tesis İçindeki Aktif Ziyaretçi</div>
+            <div class="stat-val" id="statActive" style="color: #ea580c;">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Bugünkü Toplam Giriş</div>
+            <div class="stat-val" id="statToday">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Çıkış Yapanlar</div>
+            <div class="stat-val" id="statCheckedOut" style="color: #16a34a;">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Tüm Zamanlar Toplam</div>
+            <div class="stat-val" id="statTotal">0</div>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <input type="text" id="searchInput" placeholder="İsim, TCKN, Firma, Plaka veya Takip No ara..." oninput="filterData()">
+        <select id="filterDept" onchange="filterData()">
+            <option value="">Tüm Departmanlar</option>
+            <option value="Yönetim & İdari İşler">Yönetim & İdari İşler</option>
+            <option value="Satın Alma & Tedarik">Satın Alma & Tedarik</option>
+            <option value="Üretim & Fabrika Sahası">Üretim & Fabrika</option>
+            <option value="Bilgi İşlem & IT">IT & Bilgi İşlem</option>
+            <option value="Teknik Bakım & Taşeron">Teknik Bakım & Taşeron</option>
+        </select>
+        <select id="filterStatus" onchange="filterData()">
+            <option value="">Tüm Durumlar</option>
+            <option value="Tesis İçinde (Aktif)">Tesis İçinde (Aktif)</option>
+            <option value="Çıkış Yapıldı">Çıkış Yapıldı</option>
+        </select>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Takip No</th>
+                    <th>Ziyaretçi</th>
+                    <th>Firma</th>
+                    <th>Ziyaret Edilen Yetkili</th>
+                    <th>Departman</th>
+                    <th>Giriş Saati</th>
+                    <th>Çıkış Saati</th>
+                    <th>Durum</th>
+                    <th>İşlem</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr><td colspan="9" style="text-align:center; padding: 24px; color: var(--text-muted);">Yükleniyor...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal" id="detailModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 id="modalTitle">Ziyaretçi Detayı</h3>
+            <button onclick="closeModal()" style="border:none; background:none; font-size: 1.2rem; cursor:pointer;">✖</button>
+        </div>
+        <div id="modalBody"></div>
+        <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 14px;">
+            <div id="modalActions"></div>
+            <button class="btn" onclick="window.print()">🖨️ Yazdır</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let allData = [];
+let activeItem = null;
+
+async function fetchData() {
+    try {
+        const res = await fetch('/api/ziyaretciler');
+        if (res.ok) {
+            allData = await res.json();
+        } else {
+            fallbackLocal();
+        }
+    } catch (e) {
+        fallbackLocal();
+    }
+    render();
+}
+
+function fallbackLocal() {
+    allData = JSON.parse(localStorage.getItem('isg_ziyaretciler') || '[]');
+}
+
+function render() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const fDept = document.getElementById('filterDept').value;
+    const fStatus = document.getElementById('filterStatus').value;
+
+    const filtered = allData.filter(d => {
+        const matchesQ = !q || (d.tracking_code && d.tracking_code.toLowerCase().includes(q)) ||
+                              (d.visitor_name && d.visitor_name.toLowerCase().includes(q)) ||
+                              (d.visitor_company && d.visitor_company.toLowerCase().includes(q)) ||
+                              (d.host_employee && d.host_employee.toLowerCase().includes(q)) ||
+                              (d.vehicle_plate && d.vehicle_plate.toLowerCase().includes(q));
+        const matchesDept = !fDept || d.host_department === fDept;
+        const matchesStatus = !fStatus || (d.status || 'Tesis İçinde (Aktif)') === fStatus;
+        return matchesQ && matchesDept && matchesStatus;
+    });
+
+    // Stats
+    const activeList = allData.filter(x => (x.status || 'Tesis İçinde (Aktif)') === 'Tesis İçinde (Aktif)');
+    document.getElementById('statActive').innerText = activeList.length;
+    document.getElementById('statTotal').innerText = allData.length;
+    document.getElementById('statCheckedOut').innerText = allData.filter(x => x.status === 'Çıkış Yapıldı').length;
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    document.getElementById('statToday').innerText = allData.filter(x => (x.check_in_time || '').startsWith(todayStr)).length;
+
+    const tbody = document.getElementById('tableBody');
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 24px; color: #64748b;">Kayıt bulunamadı.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = filtered.map((d, i) => {
+        const isActive = (d.status || 'Tesis İçinde (Aktif)') === 'Tesis İçinde (Aktif)';
+        const inTime = d.check_in_time ? new Date(d.check_in_time).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'}) : '-';
+        const outTime = d.check_out_time ? new Date(d.check_out_time).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'}) : '-';
+
+        return `
+            <tr>
+                <td><b>${d.tracking_code || 'ISG-'+i}</b></td>
+                <td><b>${escapeHtml(d.visitor_name || '')}</b><br><small style="color:var(--text-muted)">${escapeHtml(d.visitor_phone || '')}</small></td>
+                <td>${escapeHtml(d.visitor_company || '')}</td>
+                <td><b>${escapeHtml(d.host_employee || '')}</b></td>
+                <td><small>${escapeHtml(d.host_department || '')}</small></td>
+                <td>${inTime}</td>
+                <td>${outTime}</td>
+                <td><span class="badge ${isActive ? 'badge-active' : 'badge-out'}">${d.status || 'Tesis İçinde'}</span></td>
+                <td>
+                    <div style="display:flex; gap:6px;">
+                        ${isActive ? `<button class="btn btn-success" style="padding:4px 8px; font-size:0.75rem;" onclick="checkOut('${d.tracking_code}')">Çıkış Ver</button>` : ''}
+                        <button class="btn" style="padding:4px 8px; font-size:0.75rem;" onclick="viewDetail(${i})">Detay</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function filterData() { render(); }
+
+async function checkOut(code) {
+    const item = allData.find(x => x.tracking_code === code);
+    if (!item) return;
+
+    item.status = 'Çıkış Yapıldı';
+    item.check_out_time = new Date().toISOString();
+
+    try {
+        await fetch('/api/ziyaretci-cikis', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tracking_code: code, check_out_time: item.check_out_time })
+        });
+    } catch(e) {}
+
+    localStorage.setItem('isg_ziyaretciler', JSON.stringify(allData));
+    render();
+}
+
+function viewDetail(idx) {
+    activeItem = allData[idx];
+    if (!activeItem) return;
+
+    document.getElementById('modalTitle').innerText = `${activeItem.tracking_code} - ${activeItem.visitor_name}`;
+    const b = document.getElementById('modalBody');
+    b.innerHTML = `
+        <div class="detail-row"><div class="detail-lbl">Ziyaretçi Adı:</div><div class="detail-val"><b>${escapeHtml(activeItem.visitor_name || '')}</b></div></div>
+        <div class="detail-row"><div class="detail-lbl">TCKN / Pasaport:</div><div class="detail-val">${escapeHtml(activeItem.visitor_id || '')}</div></div>
+        <div class="detail-row"><div class="detail-lbl">Telefon / E-posta:</div><div class="detail-val">${escapeHtml(activeItem.visitor_phone || '')} | ${escapeHtml(activeItem.visitor_email || '-')}</div></div>
+        <div class="detail-row"><div class="detail-lbl">Firma / Kurum:</div><div class="detail-val">${escapeHtml(activeItem.visitor_company || '')}</div></div>
+        <div class="detail-row"><div class="detail-lbl">Görüşülen Personel:</div><div class="detail-val"><b>${escapeHtml(activeItem.host_employee || '')}</b> (${escapeHtml(activeItem.host_department || '')})</div></div>
+        <div class="detail-row"><div class="detail-lbl">Ziyaret Sebebi:</div><div class="detail-val">${escapeHtml(activeItem.visit_reason || '')}</div></div>
+        <div class="detail-row"><div class="detail-lbl">Ekipmanlar:</div><div class="detail-val">${escapeHtml(activeItem.equipment_brought || 'Yok')}</div></div>
+        <div class="detail-row"><div class="detail-lbl">Araç Plakası:</div><div class="detail-val">${escapeHtml(activeItem.vehicle_plate || 'Yok')}</div></div>
+        <div class="detail-row"><div class="detail-lbl">Giriş Zamanı:</div><div class="detail-val">${activeItem.check_in_time ? new Date(activeItem.check_in_time).toLocaleString('tr-TR') : '-'}</div></div>
+        <div class="detail-row"><div class="detail-lbl">Çıkış Zamanı:</div><div class="detail-val">${activeItem.check_out_time ? new Date(activeItem.check_out_time).toLocaleString('tr-TR') : 'Halen Tesis İçinde'}</div></div>
+    `;
+
+    const mActions = document.getElementById('modalActions');
+    if ((activeItem.status || 'Tesis İçinde (Aktif)') === 'Tesis İçinde (Aktif)') {
+        mActions.innerHTML = `<button class="btn btn-success" onclick="checkOut('${activeItem.tracking_code}'); closeModal();">🚪 Tesis Çıkışını Tamamla</button>`;
+    } else {
+        mActions.innerHTML = `<span style="color:#16a34a; font-weight:700; font-size:0.85rem;">✅ Çıkış Kaydı Alınmıştır</span>`;
+    }
+
+    document.getElementById('detailModal').style.display = 'flex';
+}
+
+function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
+
+function printEvacuationList() {
+    const inside = allData.filter(x => (x.status || 'Tesis İçinde (Aktif)') === 'Tesis İçinde (Aktif)');
+    const w = window.open('', '_blank');
+    w.document.write(`
+        <html><head><title>ACİL DURUM TAHLİYE LİSTESİ</title>
+        <style>body{font-family:sans-serif; padding:20px;} table{width:100%; border-collapse:collapse;} th,td{border:1px solid #000; padding:8px; text-align:left; font-size:12px;}</style>
+        </head><body>
+        <h2>🚨 ACİL DURUM TESİS İÇİ ZİYARETÇİ TAHLİYE VE YOKLAMA LİSTESİ</h2>
+        <p>Rapor Tarih ve Saati: ${new Date().toLocaleString('tr-TR')} | <b>Tesis İçindeki Kişi Sayısı: ${inside.length}</b></p>
+        <table>
+            <tr><th>No</th><th>Ziyaretçi Adı Soyadı</th><th>Firma</th><th>Telefon</th><th>Görüşülen Personel</th><th>Departman</th><th>Giriş Saati</th><th>Yoklama İmzası</th></tr>
+            ${inside.map((x, idx) => `<tr><td>${idx+1}</td><td><b>${x.visitor_name}</b></td><td>${x.visitor_company}</td><td>${x.visitor_phone}</td><td>${x.host_employee}</td><td>${x.host_department}</td><td>${new Date(x.check_in_time).toLocaleTimeString('tr-TR')}</td><td>[  ]</td></tr>`).join('')}
+        </table>
+        <br><p>İSG Acil Durum Ekipleri Lideri İmzası: ____________________</p>
+        </body></html>
+    `);
+    w.document.close();
+    w.print();
+}
+
+function exportCSV() {
+    if (!allData || allData.length === 0) { alert('Dışa aktarılacak ziyaretçi verisi bulunamadı.'); return; }
+    let csv = '\uFEFFTakip No,Ziyaretçi Adı,TCKN,Telefon,Firma,Görüşülen Kişi,Departman,Sebep,Plaka,Giriş Zamanı,Çıkış Zamanı,Durum\n';
+    allData.forEach(d => {
+        csv += `"${d.tracking_code || ''}","${d.visitor_name || ''}","${d.visitor_id || ''}","${d.visitor_phone || ''}","${d.visitor_company || ''}","${d.host_employee || ''}","${d.host_department || ''}","${d.visit_reason || ''}","${d.vehicle_plate || ''}","${d.check_in_time || ''}","${d.check_out_time || ''}","${d.status || 'Tesis İçinde'}"\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `isg_ziyaretciler_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+}
+
+function escapeHtml(s) {
+    return String(s||'').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+window.onload = fetchData;
+</script>
+
+</body>
+</html>
