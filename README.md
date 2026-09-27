@@ -76,6 +76,18 @@ python scripts/test_isg.py
 
 ---
 
+## 🌐 Kurumsal & E-Dönüşüm Açık Kaynak Ekosistemi
+
+Bu ziyaretçi ve İSG kayıt aracı, [@eimza-kep](https://github.com/eimza-kep) açık kaynak ekosisteminin tesis güvenliği ve iş sağlığı modülüdür. İlgili diğer araçlar:
+
+* 🔒 [kurumsal-kvkk-basvuru-scripti](https://github.com/eimza-kep/kurumsal-kvkk-basvuru-scripti) - Ziyaretçi kişisel verileri, kamera kayıtları ve KVKK aydınlatma portali.
+* 👥 [kurumsal-ik-is-basvuru-scripti](https://github.com/eimza-kep/kurumsal-ik-is-basvuru-scripti) - Kurum içine iş görüşmesine gelen adayların takibi ve İSG bilgilendirmesi.
+* 🚚 [e-donusum-rehberleri](https://github.com/eimza-kep/e-donusum-rehberleri) - Tesis giriş-çıkışlarında e-İrsaliye karekod ve yol denetim standartları rehberi.
+* 🌟 [awesome-turkiye-e-donusum](https://github.com/eimza-kep/awesome-turkiye-e-donusum) - Türkiye e-Dönüşüm açık kaynak araçları ve kütüphaneleri kürasyonu.
+
+---
+
 ## ⚖️ Lisans
 
 Bu proje [MIT Lisansı](LICENSE) kapsamında açık kaynak olarak sunulmuştur.
+
