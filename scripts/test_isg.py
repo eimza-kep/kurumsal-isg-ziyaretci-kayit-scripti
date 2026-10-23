@@ -15,6 +15,13 @@ from scripts.isg_digital_signature import (
     generate_sms_otp_code,
     get_evacuation_report
 )
+from scripts.isg_protocol_generator import (
+    get_isg_orientation_rules,
+    generate_isg_protocol_document_html,
+    calculate_isg_audit_metrics,
+    generate_isg_audit_report_html,
+    generate_isg_csv_export
+)
 
 class TestVisitorISGSystem(unittest.TestCase):
     def setUp(self):
@@ -155,6 +162,108 @@ class TestVisitorISGSystem(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(base_dir, "server.py")), "server.py bulunamadı")
         self.assertTrue(os.path.exists(os.path.join(base_dir, "api.php")), "api.php bulunamadı")
         self.assertTrue(os.path.exists(os.path.join(base_dir, "scripts", "isg_digital_signature.py")), "isg_digital_signature.py bulunamadı")
+        self.assertTrue(os.path.exists(os.path.join(base_dir, "scripts", "isg_protocol_generator.py")), "isg_protocol_generator.py bulunamadı")
+
+    def test_isg_orientation_rules_by_hazard_class(self):
+        rules_low = get_isg_orientation_rules("Az Tehlikeli")
+        self.assertGreaterEqual(len(rules_low), 5)
+        self.assertTrue(any("Yaka Kartı" in r["title"] for r in rules_low))
+
+        rules_mid = get_isg_orientation_rules("Tehlikeli")
+        self.assertGreaterEqual(len(rules_mid), 5)
+        self.assertTrue(any("Forklift" in r["title"] or "KKD" in r["title"] for r in rules_mid))
+
+        rules_high = get_isg_orientation_rules("Çok Tehlikeli")
+        self.assertGreaterEqual(len(rules_high), 5)
+        self.assertTrue(any("Sıcak İş" in r["title"] or "Donanımlı" in r["title"] for r in rules_high))
+
+    def test_isg_protocol_document_html_generation(self):
+        sample_visitor = {
+            "tracking_code": "ISG-2026-TEST-DOC",
+            "visitor_name": "Mustafa Kılıç",
+            "visitor_id": "11223344556",
+            "visitor_phone": "05559876543",
+            "visitor_company": "Kılıç Mühendislik & İmalat A.Ş.",
+            "host_employee": "Ahmet Bey",
+            "host_department": "Üretim & Fabrika Sahası",
+            "hazard_class": "Çok Tehlikeli",
+            "ppe_items": "Baret, Reflektörlü Yelek, İş Ayakkabısı, Koruyucu Gözlük",
+            "visit_reason": "Taşeron & Montaj Çalışması",
+            "check_in_time": "2026-10-23T08:30:00Z",
+            "digital_signature_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+        html = generate_isg_protocol_document_html(sample_visitor)
+        self.assertIn("<!DOCTYPE html>", html)
+        self.assertIn("ISG-2026-TEST-DOC", html)
+        self.assertIn("6331 SAYILI İSG KANUNU", html)
+        self.assertIn("ZİYARETÇİ VE ALT İŞVEREN GİRİŞ PROTOKOLÜ &amp; KABUL TUTANAĞI", html)
+        self.assertIn("Mustafa Kılıç", html)
+        self.assertIn("SAHA TEHLİKE DERECESİ", html)
+        self.assertIn("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", html)
+        self.assertIn("@media print", html)
+
+    def test_isg_audit_metrics_calculation(self):
+        mock_visitors = [
+            {"status": "Tesis İçinde (Aktif)", "hazard_class": "Az Tehlikeli", "host_department": "Yönetim", "ppe_items": "", "digital_signature_hash": "hash1"},
+            {"status": "Tesis İçinde (Aktif)", "hazard_class": "Tehlikeli", "host_department": "Depo", "ppe_items": "Baret, Yelek", "digital_signature_hash": "hash2"},
+            {"status": "Çıkış Yapıldı", "hazard_class": "Çok Tehlikeli", "host_department": "Fabrika", "ppe_items": "Baret, Yelek, İş Ayakkabısı", "digital_signature_hash": "hash3"},
+        ]
+        metrics = calculate_isg_audit_metrics(mock_visitors)
+        self.assertEqual(metrics["total_visitors"], 3)
+        self.assertEqual(metrics["active_inside"], 2)
+        self.assertEqual(metrics["checked_out"], 1)
+        self.assertEqual(metrics["hazard_counts"]["Az Tehlikeli"], 1)
+        self.assertEqual(metrics["hazard_counts"]["Tehlikeli"], 1)
+        self.assertEqual(metrics["hazard_counts"]["Çok Tehlikeli"], 1)
+        self.assertEqual(metrics["compliance_rate"], 100.0)
+        self.assertEqual(metrics["audit_status"], "TAM UYUMLU")
+
+    def test_isg_audit_report_html_generation(self):
+        metrics = {
+            "report_date": "23.10.2026 21:00:00",
+            "total_visitors": 12,
+            "active_inside": 4,
+            "checked_out": 8,
+            "compliance_rate": 100.0,
+            "hazard_counts": {"Az Tehlikeli": 5, "Tehlikeli": 4, "Çok Tehlikeli": 3},
+            "dept_counts": {"Üretim": 6, "Depo": 4, "IT": 2},
+            "ppe_counts": {"Baret": 7, "Reflektörlü Yelek": 7, "İş Ayakkabısı": 5, "Koruyucu Gözlük": 3}
+        }
+        report_html = generate_isg_audit_report_html(metrics)
+        self.assertIn("<!DOCTYPE html>", report_html)
+        self.assertIn("İŞ SAĞLIĞI VE GÜVENLİĞİ (İSG) ZİYARETÇİ VE TAŞERON FAALİYET &amp; RİSK DENETİM RAPORU", report_html)
+        self.assertIn("Toplam Ziyaretçi / Taşeron", report_html)
+        self.assertIn("12", report_html)
+        self.assertIn("Zimmet Edilen Adet", report_html)
+
+    def test_isg_csv_export(self):
+        visitors = [
+            {
+                "tracking_code": "ISG-2026-9001",
+                "visitor_name": "Selin Aydın",
+                "visitor_id": "12345678901",
+                "visitor_phone": "05321112233",
+                "visitor_company": "Aydın Lojistik",
+                "visitor_email": "selin@aydin.com",
+                "host_employee": "Mehmet Bey",
+                "host_department": "Lojistik",
+                "visit_reason": "Mal Teslimi",
+                "hazard_class": "Tehlikeli",
+                "ppe_items": "Baret, Yelek",
+                "equipment_brought": "El Terminali",
+                "vehicle_plate": "34 ABC 789",
+                "check_in_time": "2026-10-23T11:00:00Z",
+                "check_out_time": "",
+                "status": "Tesis İçinde (Aktif)",
+                "digital_signature_hash": "a1b2c3d4e5f6..."
+            }
+        ]
+        csv_out = generate_isg_csv_export(visitors)
+        self.assertTrue(csv_out.startswith("\ufeff"), "Excel uyumlu UTF-8 BOM olmalıdır.")
+        self.assertIn("ISG-2026-9001", csv_out)
+        self.assertIn("Selin Aydın", csv_out)
+        self.assertIn("Tehlikeli", csv_out)
+        self.assertIn("Baret, Yelek", csv_out)
 
 if __name__ == "__main__":
     unittest.main()

@@ -28,13 +28,22 @@
 - **Kriptografik Dijital Mühür (SHA-256 Consent Hash):** Ziyaretçinin kimlik numarası, adı, tehlike sınıfı, KKD seçimleri ve onay zamanı kriptografik olarak imzalanır; basılan yaka kartına ve yönetim paneline denetime hazır SHA-256 mührü olarak işlenir.
 - **SMS OTP Onay Kancası:** Tesis girişinde cep telefonuna gönderilen 6 haneli doğrulama kodu ile dijital onay kanıtı oluşturulur.
 
-### 3. 🪪 Yazdırılabilir Ziyaretçi Yaka Kartı
+### 3. 📄 A4 Resmi İSG Ziyaretçi Giriş Protokolü & Kabul Tutanağı (HTML / PDF)
+- 6331 Sayılı Kanun Madde 4 ve 17 uyarınca, Çalışma ve Sosyal Güvenlik Bakanlığı iş müfettişleri denetimlerinde ibraz edilecek resmi A4 formatında **İSG Ziyaretçi Kabul Tutanağı**.
+- Tesis resmi anteti, ziyaretçi kimlik bilgileri, ziyaret edilen yetkili, teslim edilen KKD zimmet listesi, 5 temel İSG kuralı tebliği, SHA-256 dijital mührü ve imza/kaşe alanları içerir.
+- Form doldurulduğunda ziyaretçi tarafından doğrudan indirilebilir veya `/admin` paneli üzerinden tek tıkla yazdırılabilir.
+
+### 4. 📊 Yıllık İSG Ziyaretçi & Taşeron Faaliyet ve Risk Denetim Raporu
+- Tesis tehlike sınıfı dağılımı (Az Tehlikeli, Tehlikeli, Çok Tehlikeli), teslim edilen KKD donanım envanteri, departman dağılımı ve İSG dijital onay uyum oranını (%100 hedefi) hesaplar.
+- A4 formatında yazdırılabilir resmi İSG Kurul Denetim Raporu (`/api/isg-denetim-raporu-html`) ve otomasyonlar için JSON API (`/api/isg-denetim-raporu-json`).
+
+### 5. 🪪 Yazdırılabilir Ziyaretçi Yaka Kartı
 - Takip kodu (`ISG-2026-XXXX`), ad-soyad, firma, tehlike sınıfı rozeti, görüşülen yetkili ve dijital onay parmak izini içeren kurumsal yaka kartı formatı.
 
-### 4. 🦺 Güvenlik & Resepsiyon Yönetim Paneli (`/admin`)
+### 6. 🦺 Güvenlik & Resepsiyon Yönetim Paneli (`/admin`)
 - Tesis içi aktif ziyaretçi sayacı ve tek tıkla çıkış (Check-out) işlemi.
 - Departman ve tehlike sınıfına göre filtreleme ve arama.
-- Excel uyumlu UTF-8 BOM destekli tek tıkla Türkçe karakter korumalı CSV dışa aktarımı.
+- Excel uyumlu UTF-8 BOM destekli tek tıkla Türkçe karakter korumalı CSV dışa aktarımı (`/api/export-csv`).
 
 ---
 
@@ -73,6 +82,11 @@ Dosyaları sunucunuzdaki `/ziyaretci/` veya `/isg/` dizinine yükleyin. `api.php
 | `POST` | `/api/ziyaretci-giris` | Yeni ziyaretçi kaydını alır, SHA-256 İSG dijital mührünü üretir ve takip kodu döner. |
 | `GET` | `/api/ziyaretciler` | Tüm ziyaretçileri ve güncel durumlarını listeler. |
 | `POST` | `/api/ziyaretci-cikis` | Ziyaretçinin tesisten çıkış saatini kaydeder ve durumunu 'Çıkış Yapıldı' olarak günceller. |
+| `GET` | `/api/isg-oryantasyon-kurallari?hazard=...` | Tesis tehlike sınıfına göre 6331 sayılı Kanun uyumlu güvenlik talimatlarını döner. |
+| `GET` | `/api/isg-tutanak-html?code=...` | Ziyaretçinin resmi A4 formatındaki İSG Kabul Tutanağını üretir. |
+| `GET` | `/api/isg-denetim-raporu-json` | Yıllık İSG ziyaretçi/taşeron denetim ve risk analizi metriklerini döner. |
+| `GET` | `/api/isg-denetim-raporu-html` | Yazdırılabilir A4 formatında Yıllık İSG Faaliyet ve Denetim Raporu sunar. |
+| `GET` | `/api/export-csv` | Excel uyumlu UTF-8 BOM destekli tam ziyaretçi listesini CSV formatında indirir. |
 | `GET` | `/api/acil-tahliye` | Yangın/deprem anında binada içeride kalan aktif kişilerin acil tahliye raporunu döner. |
 | `GET` | `/api/generate-otp` | Ziyaretçi telefon doğrulaması için 6 haneli SMS OTP kodu üretir. |
 | `GET` | `/api/isg-taahhut-dogrula?code=...` | Kayıtlı İSG taahhütname hash'inin veri bütünlüğünü ve geçerliliğini denetler. |
@@ -84,8 +98,8 @@ Dosyaları sunucunuzdaki `/ziyaretci/` veya `/isg/` dizinine yükleyin. `api.php
 
 ```
 kurumsal-isg-ziyaretci-kayit-scripti/
-├── index.html              # Ziyaretçi kayıt formu, tehlike sınıfı, KKD & yaka kartı
-├── admin.html              # Güvenlik yönetim paneli ve acil durum tahliye modalı
+├── index.html              # Ziyaretçi kayıt formu, dinamik İSG kuralları, KKD & yaka kartı
+├── admin.html              # Güvenlik yönetim paneli, denetim raporu & acil durum tahliyesi
 ├── server.py               # SQLite veritabanlı standalone Python HTTP sunucusu (Port 8089)
 ├── api.php                 # PHP tabanlı JSON REST backend (cPanel / Paylaşımlı hosting)
 ├── Dockerfile              # Docker container dağıtım dosyası
@@ -93,7 +107,8 @@ kurumsal-isg-ziyaretci-kayit-scripti/
 ├── baslat.sh               # Linux / macOS başlatıcı
 ├── scripts/
 │   ├── isg_digital_signature.py  # SHA-256 dijital mühür, OTP ve acil tahliye motoru
-│   └── test_isg.py               # Otomatik birim ve entegrasyon test paketi
+│   ├── isg_protocol_generator.py # A4 İSG Kabul Tutanağı, oryantasyon kuralları & denetim raporu
+│   └── test_isg.py               # 12/12 testten oluşan otomatik birim ve entegrasyon test paketi
 ├── .github/
 │   └── workflows/ci.yml    # GitHub Actions CI testi
 └── README.md               # Dokümantasyon

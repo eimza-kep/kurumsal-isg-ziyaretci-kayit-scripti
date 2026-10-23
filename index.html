@@ -198,14 +198,15 @@
                 <small style="color:#9a3412; font-size:0.75rem; display:block; margin-top:6px;">* Sahaya girişte yukarıda işaretlenen donanımların eksiksiz kuşanılması zorunludur.</small>
             </div>
 
-            <div class="safety-rules-box">
-                <b>ZİYARETÇİ VE ALT İŞVEREN İŞ SAĞLIĞI VE GÜVENLİĞİ TALİMATI:</b><br>
-                1. Tesis içinde ziyaretçi yaka kartınızı görünür şekilde taşıyınız.<br>
-                2. Üretim ve depo sahalarında mutlaka baret, emniyet yeleği ve iş ayakkabısı giyiniz.<br>
-                3. Belirlenmiş sarı yaya yollarının dışına çıkmayınız; forklift ve vinç çalışma sahalarına yaklaşmayınız.<br>
-                4. Sigara yalnızca belirlenmiş açık hava sigara içme alanlarında içilebilir.<br>
-                5. Acil durum sireni duyulduğunda en yakın acil çıkış kapısını takip ederek Acil Toplanma Alanına intikal ediniz.<br>
-                6. 6698 sayılı KVKK uyarınca tesis içi güvenlik kameralarıyla kayıt yapılmaktadır.
+            <div class="safety-rules-box" id="safetyRulesBox">
+                <b>6331 SAYILI İSG KANUNU GEREĞİ ZİYARETÇİ VE ALT İŞVEREN TALİMATI:</b>
+                <div id="dynamicRulesList" style="margin-top:6px;">
+                    <div>1. <b>Yaka Kartı ve Refakat:</b> Tesis içinde ziyaretçi kartınızı görünür taşıyınız; refakatsiz sahaya çıkmayınız.</div>
+                    <div>2. <b>Acil Durum:</b> Siren veya anons duyulduğunda en yakın acil çıkıştan Acil Toplanma Alanına intikal ediniz.</div>
+                    <div>3. <b>Ateş Yasağı:</b> Tesis içi tüm kapalı mekanlar ve çalışma sahalarında sigara içmek kesinlikle yasaktır.</div>
+                    <div>4. <b>Saha Güvenliği:</b> Islak zemin, elektrik panoları ve sarı yaya yolları emniyet kurallarına riayet ediniz.</div>
+                    <div>5. <b>Bilgi Güvenliği & KVKK:</b> Tesis içinde izinsiz fotoğraf ve video kaydı yapılması yasaktır.</div>
+                </div>
             </div>
 
             <!-- Dijital İmza & SMS OTP Kancası (Issue #2) -->
@@ -271,6 +272,7 @@
         </div>
 
         <div style="margin-top: 24px; display: flex; justify-content: center; gap: 12px; flex-wrap:wrap;">
+            <a id="btnTutanakDownload" href="#" target="_blank" class="btn-submit" style="width: auto; padding: 10px 22px; background: #ea580c; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">📄 A4 İSG Kabul Tutanağını İndir / Yazdır</a>
             <button class="btn-submit" style="width: auto; padding: 10px 22px; background: #0f172a;" onclick="window.print()">🖨️ Yaka Kartını Yazdır</button>
             <button class="btn-submit" style="width: auto; padding: 10px 22px; background: #e2e8f0; color: #334155;" onclick="location.reload()">➕ Yeni Ziyaretçi Girişi</button>
         </div>
@@ -280,7 +282,7 @@
 <script>
 let currentSimulatedOtp = "582194";
 
-function handleHazardChange() {
+async function handleHazardChange() {
     const hazard = document.getElementById('hazardClass').value;
     const ppeSection = document.getElementById('ppeSection');
     if (hazard === 'Tehlikeli' || hazard === 'Çok Tehlikeli') {
@@ -288,6 +290,17 @@ function handleHazardChange() {
     } else {
         ppeSection.style.display = 'none';
     }
+
+    try {
+        const res = await fetch('/api/isg-oryantasyon-kurallari?hazard=' + encodeURIComponent(hazard));
+        if (res.ok) {
+            const data = await res.json();
+            if (data.rules && data.rules.length > 0) {
+                const listEl = document.getElementById('dynamicRulesList');
+                listEl.innerHTML = data.rules.map(r => `<div>${r.no}. <b>${r.title}:</b> ${r.rule} <span style="color:#64748b; font-size:0.75rem;">(${r.basis})</span></div>`).join('');
+            }
+        }
+    } catch(e) {}
 }
 
 async function requestSmsOtp() {
@@ -365,6 +378,11 @@ async function handleVisitorSubmit(e) {
 
     document.getElementById('isgForm').style.display = 'none';
     document.getElementById('resultBox').style.display = 'block';
+
+    const tutanakLink = document.getElementById('btnTutanakDownload');
+    if (tutanakLink) {
+        tutanakLink.href = '/api/isg-tutanak-html?code=' + encodeURIComponent(trackingCode);
+    }
 
     // Fill Badge
     document.getElementById('badgeCode').innerText = trackingCode;

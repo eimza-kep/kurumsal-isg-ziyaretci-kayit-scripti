@@ -68,6 +68,7 @@
         <h1>🦺 İSG & Tesis Güvenlik Ziyaretçi Paneli</h1>
         <div class="nav-actions">
             <a href="/" class="btn" target="_blank">🌐 Giriş Formu</a>
+            <a href="/api/isg-denetim-raporu-html" target="_blank" class="btn" style="background:#2563eb; color:white; border-color:#2563eb;">📊 İSG Denetim Raporu</a>
             <button class="btn btn-danger" onclick="openEvacuationModal()">🚨 ACİL TAHLİYE LİSTESİ</button>
             <button class="btn btn-primary" onclick="exportCSV()">📥 CSV Dışa Aktar</button>
             <button class="btn" onclick="fetchData()">🔄 Yenile</button>
@@ -274,9 +275,10 @@ function render() {
                 <td>${inTime}</td>
                 <td><span class="badge ${isActive ? 'badge-active' : 'badge-out'}">${d.status || 'Tesis İçinde'}</span></td>
                 <td>
-                    <div style="display:flex; gap:6px;">
+                    <div style="display:flex; gap:6px; flex-wrap:wrap;">
                         ${isActive ? `<button class="btn btn-success" style="padding:4px 8px; font-size:0.75rem;" onclick="checkOut('${d.tracking_code}')">Çıkış Ver</button>` : ''}
                         <button class="btn" style="padding:4px 8px; font-size:0.75rem;" onclick="viewDetail(${i})">Detay</button>
+                        <a href="/api/isg-tutanak-html?code=${encodeURIComponent(d.tracking_code || '')}" target="_blank" class="btn" style="padding:4px 8px; font-size:0.75rem;">📄 Tutanak</a>
                     </div>
                 </td>
             </tr>
@@ -331,6 +333,9 @@ function viewDetail(idx) {
             <b>✍️ 5070 E-İmza & 6331 İSG Dijital Onay Mührü:</b><br>
             <span style="font-family:monospace; color:#15803d; word-break:break-all;">${signatureHash}</span><br>
             <span style="color:#166534; font-weight:600;">✅ Onaylı & Denetime Hazır</span>
+        </div>
+        <div style="margin-top:12px;">
+            <a href="/api/isg-tutanak-html?code=${encodeURIComponent(activeItem.tracking_code || '')}" target="_blank" class="btn btn-primary" style="text-decoration:none; display:block; text-align:center; padding:10px;">📄 6331 İSG Resmi Kabul Tutanağını Aç / Yazdır</a>
         </div>
     `;
 

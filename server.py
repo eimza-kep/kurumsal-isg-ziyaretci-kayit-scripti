@@ -28,6 +28,13 @@ from scripts.isg_digital_signature import (
     generate_sms_otp_code,
     get_evacuation_report
 )
+from scripts.isg_protocol_generator import (
+    get_isg_orientation_rules,
+    generate_isg_protocol_document_html,
+    calculate_isg_audit_metrics,
+    generate_isg_audit_report_html,
+    generate_isg_csv_export
+)
 
 PORT = int(os.environ.get("PORT", 8089))
 DB_FILE = os.environ.get("DATABASE_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "isg_ziyaretciler.db"))
@@ -93,6 +100,16 @@ class VisitorHandler(http.server.SimpleHTTPRequestHandler):
             self.send_json({"otp": generate_sms_otp_code()})
         elif path == "/api/isg-taahhut-dogrula":
             self.handle_verify_consent(qs)
+        elif path == "/api/isg-oryantasyon-kurallari":
+            self.handle_orientation_rules(qs)
+        elif path == "/api/isg-tutanak-html":
+            self.handle_protocol_html(qs)
+        elif path == "/api/isg-denetim-raporu-json":
+            self.handle_audit_report_json()
+        elif path == "/api/isg-denetim-raporu-html":
+            self.handle_audit_report_html()
+        elif path == "/api/export-csv":
+            self.handle_export_csv()
         else:
             super().do_GET()
 
@@ -266,6 +283,95 @@ class VisitorHandler(http.server.SimpleHTTPRequestHandler):
             "digital_signature_hash": expected_hash,
             "check_in_time": r_dict.get("check_in_time")
         })
+
+    def handle_orientation_rules(self, qs):
+        """Tehlike sınıfına göre İSG oryantasyon kurallarını döner"""
+        hazard = qs.get("hazard", ["Az Tehlikeli"])[0]
+        rules = get_isg_orientation_rules(hazard)
+        self.send_json({"hazard_class": hazard, "rules": rules})
+
+    def handle_protocol_html(self, qs):
+        """A4 İSG Ziyaretçi Kabul Tutanağı HTML sayfası"""
+        code = qs.get("code", [""])[0]
+        if not code:
+            self.send_error(400, "code parametresi zorunludur.")
+            return
+
+        conn = sqlite3.connect(DB_FILE)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM visitors WHERE tracking_code = ?", (code,))
+        row = cur.fetchone()
+        conn.close()
+
+        if not row:
+            self.send_error(404, "Ziyaretçi kaydı bulunamadı.")
+            return
+
+        html_content = generate_isg_protocol_document_html(dict(row))
+        body = html_content.encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def handle_audit_report_json(self):
+        """Yıllık İSG denetim ve risk metrikleri JSON"""
+        try:
+            conn = sqlite3.connect(DB_FILE)
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM visitors ORDER BY id DESC")
+            rows = [dict(r) for r in cur.fetchall()]
+            conn.close()
+
+            metrics = calculate_isg_audit_metrics(rows)
+            self.send_json({"status": "success", "metrics": metrics})
+        except Exception as e:
+            self.send_json({"status": "error", "message": str(e)}, status=500)
+
+    def handle_audit_report_html(self):
+        """A4 formatında İSG Yıllık Denetim ve Risk Analiz Raporu HTML"""
+        try:
+            conn = sqlite3.connect(DB_FILE)
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM visitors ORDER BY id DESC")
+            rows = [dict(r) for r in cur.fetchall()]
+            conn.close()
+
+            metrics = calculate_isg_audit_metrics(rows)
+            html_content = generate_isg_audit_report_html(metrics)
+            body = html_content.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        except Exception as e:
+            self.send_error(500, f"Rapor oluşturulurken hata: {e}")
+
+    def handle_export_csv(self):
+        """Excel uyumlu UTF-8 BOM destekli CSV indirme"""
+        try:
+            conn = sqlite3.connect(DB_FILE)
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM visitors ORDER BY id DESC")
+            rows = [dict(r) for r in cur.fetchall()]
+            conn.close()
+
+            csv_text = generate_isg_csv_export(rows)
+            body = csv_text.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/csv; charset=utf-8")
+            self.send_header("Content-Disposition", 'attachment; filename="isg_ziyaretci_listesi.csv"')
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        except Exception as e:
+            self.send_error(500, f"CSV oluşturulurken hata: {e}")
 
 if __name__ == "__main__":
     init_db()
