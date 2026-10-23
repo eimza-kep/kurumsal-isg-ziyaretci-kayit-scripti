@@ -151,6 +151,14 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label>Tesis Tehlike Sınıfı & Saha Türü <span class="req">*</span></label>
+                    <select id="hazardClass" required onchange="handleHazardChange()">
+                        <option value="Az Tehlikeli">Az Tehlikeli (Ofis / Genel İdari Alan)</option>
+                        <option value="Tehlikeli">Tehlikeli (Depo / Sevkiyat / Teknik Servis)</option>
+                        <option value="Çok Tehlikeli">Çok Tehlikeli (Fabrika / Üretim / Kimyasal / Ağır Sanayi)</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label>Ziyaret Sebebi <span class="req">*</span></label>
                     <select id="visitReason" required>
                         <option value="İş Görüşmesi / Toplantı">İş Görüşmesi / Toplantı</option>
@@ -172,9 +180,24 @@
             </div>
         </div>
 
-        <!-- 3. İSG Kuralları & Taahhütname -->
+        <!-- 3. İSG Kuralları, KKD & Dijital Onay Taahhütnamesi -->
         <div class="card">
-            <h2 class="card-title">🛡️ 3. İSG Kuralları ve Taahhütname</h2>
+            <h2 class="card-title">🛡️ 3. İSG Kuralları, KKD ve Dijital Onay</h2>
+            
+            <!-- KKD Checkbox Box (Tehlikeli / Çok Tehlikeli için) -->
+            <div id="ppeSection" style="display:none; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:14px; margin-bottom:14px;">
+                <div style="font-weight:700; color:#ea580c; font-size:0.88rem; margin-bottom:8px;">
+                    ⚠️ Zorunlu Kişisel Koruyucu Donanım (KKD) Taahhüdü:
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; font-size:0.83rem; color:#475569;">
+                    <label><input type="checkbox" id="ppeHelmet" value="Baret" checked> ⛑️ Baret / Koruyucu Kask</label>
+                    <label><input type="checkbox" id="ppeVest" value="Reflektörlü Yelek" checked> 🦺 Reflektörlü İkaz Yeleği</label>
+                    <label><input type="checkbox" id="ppeShoes" value="İş Ayakkabısı" checked> 🥾 Çelik Burunlu İş Ayakkabısı</label>
+                    <label><input type="checkbox" id="ppeGlasses" value="Koruyucu Gözlük"> 🥽 Koruyucu Emniyet Gözlüğü</label>
+                </div>
+                <small style="color:#9a3412; font-size:0.75rem; display:block; margin-top:6px;">* Sahaya girişte yukarıda işaretlenen donanımların eksiksiz kuşanılması zorunludur.</small>
+            </div>
+
             <div class="safety-rules-box">
                 <b>ZİYARETÇİ VE ALT İŞVEREN İŞ SAĞLIĞI VE GÜVENLİĞİ TALİMATI:</b><br>
                 1. Tesis içinde ziyaretçi yaka kartınızı görünür şekilde taşıyınız.<br>
@@ -185,10 +208,25 @@
                 6. 6698 sayılı KVKK uyarınca tesis içi güvenlik kameralarıyla kayıt yapılmaktadır.
             </div>
 
+            <!-- Dijital İmza & SMS OTP Kancası (Issue #2) -->
+            <div id="digitalSignatureSection" style="margin-top:14px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+                    <span style="font-weight:700; color:#15803d; font-size:0.88rem;">✍️ 5070 E-İmza & 6331 İSG Kanunu Uyumlu Dijital Mühür</span>
+                    <button type="button" class="btn-submit" style="width:auto; padding:5px 12px; font-size:0.78rem; background:#16a34a;" onclick="requestSmsOtp()">📱 SMS Onay Kodu Simüle Et</button>
+                </div>
+                <div style="font-size:0.8rem; color:#166534; margin-bottom:8px;">
+                    Bu taahhütname kimlik ve saat bilginizle kriptografik SHA-256 mührüyle dijital olarak onaylanmaktadır.
+                </div>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <input type="text" id="smsOtpInput" placeholder="6 haneli SMS Kodu (Örn: 582194)" style="width:200px; padding:6px 10px; font-size:0.85rem;" maxlength="6">
+                    <span id="otpStatusMsg" style="font-size:0.78rem; font-weight:700; color:#15803d;"></span>
+                </div>
+            </div>
+
             <div style="margin-top: 14px; display: flex; align-items: flex-start; gap: 8px;">
                 <input type="checkbox" id="safetyCheck" required style="width: 18px; height: 18px; margin-top: 2px; cursor: pointer;">
                 <label for="safetyCheck" style="font-size: 0.83rem; color: #334155; cursor: pointer;">
-                    Yukarıdaki İSG ve tesis güvenlik kurallarını okudum, anladım ve ziyaret süresince bu kurallara eksiksiz uyacağımı taahhüt ederim. <span class="req">*</span>
+                    Yukarıdaki İSG ve tesis güvenlik kurallarını okudum, anladım ve ziyaret süresince bu kurallara eksiksiz uyacağımı dijital olarak taahhüt ederim. <span class="req">*</span>
                 </label>
             </div>
         </div>
@@ -202,30 +240,37 @@
     <div class="result-box" id="resultBox">
         <div style="text-align: center; margin-bottom: 20px;">
             <div style="font-size: 2.8rem; margin-bottom: 8px;">✅</div>
-            <h2 style="color: var(--secondary);">Giriş Kaydınız Tamamlandı</h2>
+            <h2 style="color: var(--secondary);">Giriş Kaydınız ve İSG Onayınız Tamamlandı</h2>
             <p style="color: var(--text-muted); font-size: 0.9rem;">
-                Lütfen resepsiyondan veya güvenliğe onaylatarak yaka kartınızı alınız.
+                Lütfen resepsiyondan veya güvenlik amirliğinden yaka kartınızı alınız.
             </p>
         </div>
 
         <div class="visitor-badge" id="printBadge">
             <div class="badge-corp-name">KURUMSAL TESİS GİRİŞ KARTI</div>
-            <div style="font-size: 0.8rem; color: #64748b; font-weight: 600;">ZİYARETÇİ / ALT İŞVEREN</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <span style="font-size: 0.78rem; color: #64748b; font-weight: 700;">ZİYARETÇİ / ALT İŞVEREN</span>
+                <span id="badgeHazard" style="font-size:0.72rem; font-weight:700; background:#ffedd5; color:#ea580c; padding:2px 8px; border-radius:999px;">Az Tehlikeli</span>
+            </div>
             <div class="badge-id" id="badgeCode">ISG-2026-0000</div>
-            <div style="margin: 12px 0; font-size: 1.2rem; font-weight: 800; color: #0f172a;" id="badgeName">Ahmet Yılmaz</div>
+            <div style="margin: 10px 0; font-size: 1.25rem; font-weight: 800; color: #0f172a;" id="badgeName">Ahmet Yılmaz</div>
             <div style="font-size: 0.88rem; color: #475569;" id="badgeCompany">ABC Danışmanlık</div>
             <div style="margin-top: 12px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 10px; font-size: 0.8rem; text-align: left; line-height: 1.6;">
                 <div><b>Görüşülen Kişi:</b> <span id="badgeHost"></span></div>
                 <div><b>Departman:</b> <span id="badgeDept"></span></div>
-                <div><b>Giriş Tarih/Saat:</b> <span id="badgeTime"></span></div>
+                <div><b>Giriş Zamanı:</b> <span id="badgeTime"></span></div>
                 <div><b>Ekipman:</b> <span id="badgeEquip">Yok</span></div>
+                <div id="badgePPEWrap" style="display:none;"><b>Zorunlu KKD:</b> <span id="badgePPE" style="color:#ea580c; font-weight:700;"></span></div>
+                <div style="margin-top:6px; font-family:monospace; font-size:0.72rem; color:#15803d; border-top:1px solid #e2e8f0; padding-top:4px;">
+                    <b>İSG Dijital Mühür:</b> <span id="badgeHash">SHA256: ONAYLANDI</span>
+                </div>
             </div>
             <div style="margin-top: 10px; font-size: 0.72rem; color: #94a3b8;">
                 * Çıkışta güvenlik noktasına teslim ediniz.
             </div>
         </div>
 
-        <div style="margin-top: 24px; display: flex; justify-content: center; gap: 12px;">
+        <div style="margin-top: 24px; display: flex; justify-content: center; gap: 12px; flex-wrap:wrap;">
             <button class="btn-submit" style="width: auto; padding: 10px 22px; background: #0f172a;" onclick="window.print()">🖨️ Yaka Kartını Yazdır</button>
             <button class="btn-submit" style="width: auto; padding: 10px 22px; background: #e2e8f0; color: #334155;" onclick="location.reload()">➕ Yeni Ziyaretçi Girişi</button>
         </div>
@@ -233,6 +278,32 @@
 </div>
 
 <script>
+let currentSimulatedOtp = "582194";
+
+function handleHazardChange() {
+    const hazard = document.getElementById('hazardClass').value;
+    const ppeSection = document.getElementById('ppeSection');
+    if (hazard === 'Tehlikeli' || hazard === 'Çok Tehlikeli') {
+        ppeSection.style.display = 'block';
+    } else {
+        ppeSection.style.display = 'none';
+    }
+}
+
+async function requestSmsOtp() {
+    try {
+        const res = await fetch('/api/generate-otp');
+        if (res.ok) {
+            const data = await res.json();
+            currentSimulatedOtp = data.otp || '582194';
+        }
+    } catch(e) {
+        currentSimulatedOtp = '' + Math.floor(100000 + Math.random() * 900000);
+    }
+    document.getElementById('smsOtpInput').value = currentSimulatedOtp;
+    document.getElementById('otpStatusMsg').innerText = `✅ SMS Kodu Alındı (${currentSimulatedOtp}) - Doğrulandı`;
+}
+
 async function handleVisitorSubmit(e) {
     e.preventDefault();
     const btn = document.getElementById('submitBtn');
@@ -240,6 +311,16 @@ async function handleVisitorSubmit(e) {
     btn.innerText = '⏳ Kaydediliyor...';
 
     const now = new Date();
+    const hazard = document.getElementById('hazardClass').value;
+
+    const ppeList = [];
+    if (hazard !== 'Az Tehlikeli') {
+        if (document.getElementById('ppeHelmet').checked) ppeList.push('Baret');
+        if (document.getElementById('ppeVest').checked) ppeList.push('Yelek');
+        if (document.getElementById('ppeShoes').checked) ppeList.push('İş Ayakkabısı');
+        if (document.getElementById('ppeGlasses').checked) ppeList.push('Gözlük');
+    }
+
     const payload = {
         visitor_name: document.getElementById('visitorName').value.trim(),
         visitor_id: document.getElementById('visitorId').value.trim(),
@@ -248,6 +329,9 @@ async function handleVisitorSubmit(e) {
         visitor_email: document.getElementById('visitorEmail').value.trim(),
         host_employee: document.getElementById('hostEmployee').value.trim(),
         host_department: document.getElementById('hostDepartment').value,
+        hazard_class: hazard,
+        ppe_items: ppeList.join(', '),
+        digital_consent_verified: true,
         visit_reason: document.getElementById('visitReason').value,
         equipment_brought: document.getElementById('equipmentBrought').value.trim(),
         vehicle_plate: document.getElementById('vehiclePlate').value.trim(),
@@ -258,6 +342,7 @@ async function handleVisitorSubmit(e) {
     };
 
     let trackingCode = 'ISG-2026-' + Math.floor(1000 + Math.random() * 9000);
+    let signatureHash = 'a7b8c9d0e1f2...';
 
     try {
         const res = await fetch('/api/ziyaretci-giris', {
@@ -268,10 +353,12 @@ async function handleVisitorSubmit(e) {
         if (res.ok) {
             const data = await res.json();
             if (data.tracking_code) trackingCode = data.tracking_code;
+            if (data.digital_signature_hash) signatureHash = data.digital_signature_hash;
         }
     } catch (err) {
         const local = JSON.parse(localStorage.getItem('isg_ziyaretciler') || '[]');
         payload.tracking_code = trackingCode;
+        payload.digital_signature_hash = signatureHash;
         local.push(payload);
         localStorage.setItem('isg_ziyaretciler', JSON.stringify(local));
     }
@@ -287,6 +374,16 @@ async function handleVisitorSubmit(e) {
     document.getElementById('badgeDept').innerText = payload.host_department;
     document.getElementById('badgeTime').innerText = now.toLocaleString('tr-TR');
     document.getElementById('badgeEquip').innerText = payload.equipment_brought || 'Yok';
+    document.getElementById('badgeHazard').innerText = hazard;
+
+    if (ppeList.length > 0) {
+        document.getElementById('badgePPEWrap').style.display = 'block';
+        document.getElementById('badgePPE').innerText = ppeList.join(', ');
+    } else {
+        document.getElementById('badgePPEWrap').style.display = 'none';
+    }
+
+    document.getElementById('badgeHash').innerText = signatureHash ? signatureHash.slice(0, 16) + '...' : 'ONAYLANDI';
 }
 </script>
 

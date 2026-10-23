@@ -49,6 +49,13 @@ if ($method === 'POST') {
 
     $trackingCode = $input['tracking_code'] ?? ('ISG-2026-' . rand(1000, 9999));
     $input['tracking_code'] = $trackingCode;
+    $input['hazard_class'] = $input['hazard_class'] ?? 'Az Tehlikeli';
+    $input['ppe_items'] = $input['ppe_items'] ?? '';
+    
+    // Dijital İSG taahhüt hash'i
+    $rawPayload = "ISG-TERMS-6331|TC:".($input['visitor_id'] ?? '')."|NAME:".strtoupper($input['visitor_name'] ?? '')."|TEL:".($input['visitor_phone'] ?? '')."|HAZARD:".$input['hazard_class']."|TIME:".($input['check_in_time'] ?? '');
+    $digitalHash = hash('sha256', $rawPayload);
+    $input['digital_signature_hash'] = $digitalHash;
     $input['status'] = $input['status'] ?? 'Tesis İçinde (Aktif)';
     $input['created_at'] = $input['created_at'] ?? date('c');
 
@@ -56,12 +63,33 @@ if ($method === 'POST') {
     array_unshift($records, $input);
     saveStoredData($dataFile, $records);
 
-    echo json_encode(['status' => 'success', 'tracking_code' => $trackingCode]);
+    echo json_encode([
+        'status' => 'success',
+        'tracking_code' => $trackingCode,
+        'digital_signature_hash' => $digitalHash,
+        'hazard_class' => $input['hazard_class']
+    ], JSON_UNESCAPED_UNICODE);
     exit();
 }
 
 if ($method === 'GET') {
     $records = getStoredData($dataFile);
+
+    if ($action === 'acil-tahliye') {
+        $inside = array_values(array_filter($records, function($r) {
+            return ($r['status'] ?? 'Tesis İçinde (Aktif)') === 'Tesis İçinde (Aktif)';
+        }));
+        echo json_encode([
+            'status' => 'success',
+            'report' => [
+                'total_inside_count' => count($inside),
+                'generated_at' => date('d.m.Y H:i:s'),
+                'active_visitors' => $inside
+            ]
+        ], JSON_UNESCAPED_UNICODE);
+        exit();
+    }
+
     echo json_encode($records, JSON_UNESCAPED_UNICODE);
     exit();
 }

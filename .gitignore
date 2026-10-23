@@ -1,5 +1,6 @@
 *.db
 *.db-journal
+isg_ziyaretciler.json
 __pycache__/
 *.pyc
 *.pyo
