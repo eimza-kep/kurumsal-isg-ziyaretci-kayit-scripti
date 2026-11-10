@@ -1,3 +1,4 @@
+ISG_ACIL_DURUM_TOPLANMA_ALANLARI_2026 = ['A Blok Ana Otopark', 'B Blok Bahce Alani']
 # -*- coding: utf-8 -*-
 """
 server.py
